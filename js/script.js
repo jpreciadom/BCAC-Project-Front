@@ -12,7 +12,7 @@
         "images/Apartment5.jpg"
     ];
 
-    // Methods
+    // HTML Methods
     function insertHTML(selector, html) {
         const tarjet = document.querySelector(selector);
         tarjet.innerHTML = html;
@@ -99,7 +99,30 @@
         buildAndShowHTML("snippets/rent-snippet.html", buildRent);
     }
 
-    // dc.showHome();
+    // Owner Methods
+    dc.postRent = function () {
+        console.log("I am gonna post a rent");
+    }
+
+    dc.updateRent = function () {
+        console.log("I am gonna update the rent info");
+    }
+
+    // Renter Methods
+    dc.leaveRent = function () {
+        console.log("I am gonna leave my rent");
+    }
+
+    dc.payRent = function () {
+        console.log("I am paying my rent");
+    }
+
+    // NonOR Methods
+    dc.takeRent = function () {
+        console.log("I am gonna take the rent");
+    }
+
+    dc.showHome();
 
     global.$dc = dc;
 
