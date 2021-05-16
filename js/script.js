@@ -1,7 +1,11 @@
 (function(global) {
 
     // Variables
-    var dc = {};
+    var dc = {
+        selectedId: undefined,
+        web3Provider: undefined,
+        contracts: {}
+    };
 
     // Images
     var images = [
@@ -13,7 +17,7 @@
     ];
 
     // Web3 methods
-    async function initWeb3() {
+    async function initWeb3 () {
         if (global.ethereum) {
             dc.web3Provider = window.ethereum;
             try {
@@ -26,15 +30,31 @@
         } else {
             dc.web3Provider = new Web3.providers.HttpProvider("http://localhost:7545");
         }
+
+        initContract();
+    }
+
+    async function initContract () {
+        $ajaxUtils.sendGetRequest(
+            "artifacts/UniversityHousing.json",
+            function (json) {
+                var UniversityHousingArtifact = json;
+                // dc.contracts.UniversityHousing = TruffleContract(UniversityHousingArtifact);
+
+                // dc.contracts.UniversityHousing.setProvider(dc.web3Provider);
+                // console.log(dc.contracts.UniversityHousing);
+            },
+            true
+        );
     }
 
     // HTML Methods
-    function insertHTML(selector, html) {
+    function insertHTML (selector, html) {
         const tarjet = document.querySelector(selector);
         tarjet.innerHTML = html;
     }
 
-    function insertProperty(html, propName, propValue) {
+    function insertProperty (html, propName, propValue) {
         var propToReplace = "{{ " + propName + " }}";
         html = html.replace(new RegExp(propToReplace, "g"), propValue);
         return html;
