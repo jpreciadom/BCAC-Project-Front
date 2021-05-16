@@ -12,6 +12,22 @@
         "images/Apartment5.jpg"
     ];
 
+    // Web3 methods
+    async function initWeb3() {
+        if (global.ethereum) {
+            dc.web3Provider = window.ethereum;
+            try {
+                await window.ethereum.enable();
+            } catch (error) {
+                console.error("User denied account access");
+            }
+        } else if (global.web3) {
+            dc.web3Provider = global.web3.currentProvider;
+        } else {
+            dc.web3Provider = new Web3.providers.HttpProvider("http://localhost:7545");
+        }
+    }
+
     // HTML Methods
     function insertHTML(selector, html) {
         const tarjet = document.querySelector(selector);
@@ -56,11 +72,12 @@
         insertHTML("#main-content", postRentHTML);
     }
 
-    function buildRent (rentHTML, id) {
+    function buildRent (rentHTML) {
         const city = "Bogota, Colombia";
         const dir = "Calle 123 # 12 -34";
         const rentValue = "200";
         const image = images[dc.selectedId % 5];
+        const rol = "owner";
 
         rentHTML = insertProperty(rentHTML, "city", city);
         rentHTML = insertProperty(rentHTML, "dir", dir);
@@ -68,6 +85,35 @@
         rentHTML = insertProperty(rentHTML, "image", image);
 
         insertHTML("#main-content", rentHTML);
+
+        if (rol === "owner") {
+            buildAndShowHTML("snippets/rent-owner-buttons-snippet.html", buildRentButtons);
+        } else if (rol === "renter") {
+            buildAndShowHTML("snippets/rent-renter-buttons-snippet.html", buildRentButtons);
+        } else if (rol === "nonOR") {
+            buildAndShowHTML("snippets/rent-nonOR-buttons-snippet.html", buildRentButtons);
+        }
+    }
+
+    function buildRentButtons(buttonsHTML) {
+        insertHTML("#buttons", buttonsHTML);
+    }
+
+    function buildUpdateRent(updateRentHTML) {
+        insertHTML("#main-content", updateRentHTML);
+
+        const cityInput = document.querySelector("#city");
+        const directionInput = document.querySelector("#direction");
+        const valueInput = document.querySelector("#value");
+
+        
+        const city = "Bogota, Colombia";
+        const dir = "Calle 123 # 12 -34";
+        const rentValue = "200";
+
+        cityInput.value = city;
+        directionInput.value = dir;
+        valueInput.value = rentValue;
     }
 
     function buildAndShowHTML (htmlURL, buildFunction) {
@@ -86,17 +132,23 @@
     }
 
     dc.showHome = function () {
+        dc.selectedId = undefined;
         buildAndShowHTML("snippets/home-snippet.html", buildHome);
         buildAndShowHTML("snippets/home-item-snippet.html", buildItem);
     }
 
     dc.showPostRent = function () {
+        dc.selectedId = undefined;
         buildAndShowHTML("snippets/post-rent-snippet.html", buildPostRent);
     }
 
     dc.showRent = function (id) {
         dc.selectedId = id;
         buildAndShowHTML("snippets/rent-snippet.html", buildRent);
+    }
+
+    dc.showUpdateRent = function () {
+        buildAndShowHTML("snippets/update-rent-snippet.html", buildUpdateRent);
     }
 
     // Owner Methods
@@ -122,6 +174,7 @@
         console.log("I am gonna take the rent");
     }
 
+    initWeb3();
     dc.showHome();
 
     global.$dc = dc;
