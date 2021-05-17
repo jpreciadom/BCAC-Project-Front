@@ -153,14 +153,24 @@
         const addressInput = document.querySelector("#address");
         const valueInput = document.querySelector("#value");
 
-        
-        const city = "Bogota, Colombia";
-        const dir = "Calle 123 # 12 -34";
-        const rentValue = "200";
+        var universityHousingInstance;
 
-        cityInput.value = city;
-        addressInput.value = dir;
-        valueInput.value = rentValue;
+        dc.contracts.UniversityHousing.deployed().then( (instance) => {
+            universityHousingInstance = instance;
+
+            return universityHousingInstance.rents.call(dc.selectedId);
+        }).then( (rent) => {
+            const city = rent[3];
+                const dir = rent[4];
+                const rentValue = rent[5];
+
+            cityInput.value = city;
+            addressInput.value = dir;
+            valueInput.value = rentValue;
+        }).catch( (error) => {
+            insertHTML("#errors", "Upss... Ha ocurrido un error intentando cargar los datos del arriendo.");
+            console.log(error);
+        });
     }
 
     function buildAndShowHTML (htmlURL, buildFunction) {
@@ -199,7 +209,38 @@
 
     // Owner Methods
     dc.updateRent = function () {
-        console.log("I am gonna update the rent info");
+        const city = document.querySelector("#city").value;
+        const rentAddress = document.querySelector("#address").value;
+        const value = document.querySelector("#value").value;
+
+        if (city && rentAddress && value) {
+            if (/^[0-9]*$/.test(value)) {
+                insertHTML("#errors", "");
+
+                var universityHousingInstance;
+
+                dc.contracts.UniversityHousing.deployed().then( (instance) => {
+                    universityHousingInstance = instance;
+                    
+                    return universityHousingInstance.updateRent(
+                        dc.selectedId,
+                        city,
+                        rentAddress,
+                        value,
+                        { from: dc.web3Provider.selectedAddress }
+                    );
+                }).then( () => {
+                    dc.showHome();
+                }).catch( (error) => {
+                    insertHTML("#errors", "Upssss... Ha ocurrido un error enviando la transaccion");
+                });
+                
+            } else {
+                insertHTML("#errors", "El campo de valor debe ser numérico");
+            }
+        } else {
+            insertHTML("#errors", "Debe diligenciar todos los campos");
+        }
     }
 
     // Renter Methods
@@ -221,7 +262,6 @@
             if (/^[0-9]*$/.test(value)) {
                 insertHTML("#errors", "");
 
-                const reg = dc;
                 var universityHousingInstance;
 
                 dc.contracts.UniversityHousing.deployed().then( (instance) => {
