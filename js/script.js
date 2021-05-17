@@ -39,10 +39,10 @@
             "artifacts/UniversityHousing.json",
             function (json) {
                 var UniversityHousingArtifact = json;
-                // dc.contracts.UniversityHousing = TruffleContract(UniversityHousingArtifact);
+                dc.contracts.UniversityHousing = TruffleContract(UniversityHousingArtifact);
 
-                // dc.contracts.UniversityHousing.setProvider(dc.web3Provider);
-                // console.log(dc.contracts.UniversityHousing);
+                dc.contracts.UniversityHousing.setProvider(dc.web3Provider);
+                dc.showHome();
             },
             true
         );
@@ -62,30 +62,44 @@
 
     function buildHome (homeHTML) {
         insertHTML("#main-content", homeHTML);
+        
+        buildAndShowHTML("snippets/home-item-snippet.html", buildItem);
     }
 
     function buildItem (itemHTML) {
 
-        var html = ""
-        const numRents = 12;
+        var universityHousingInstance;
 
-        for (var i = 1; i <= numRents; i++) {
-            var current = itemHTML;
-            const city = "Bogota, Colombia";
-            const dir = "Calle 123 # 12 -34";
-            const rentValue = "200";
-            const image = images[i % 5];
+        dc.contracts.UniversityHousing.deployed().then( async function (instance) {
+            universityHousingInstance = instance;
 
-            current = insertProperty(current, "id", i);
-            current = insertProperty(current, "city", city);
-            current = insertProperty(current, "dir", dir);
-            current = insertProperty(current, "rentValue", rentValue);
-            current = insertProperty(current, "image", image);
+            return universityHousingInstance.rentCount.call();
+        }).then( async function (rentCount) {
+            var html = ""
+            const numRents = rentCount.c[0];
 
-            html += current
-        }
+            for (var i = 1; i <= numRents; i++) {
+                const rent = await universityHousingInstance.rents.call(i);
+                var current = itemHTML;
 
-        insertHTML("#home-content", html);
+                const city = rent[3];
+                const dir = rent[4];
+                const rentValue = rent[5];
+                const image = images[i % 5];
+
+                current = insertProperty(current, "id", i);
+                current = insertProperty(current, "city", city);
+                current = insertProperty(current, "dir", dir);
+                current = insertProperty(current, "rentValue", rentValue);
+                current = insertProperty(current, "image", image);
+
+                html += current
+            }
+
+            insertHTML("#home-content", html);
+        }).catch( (error) => {
+            console.log(error.message);
+        });
     }
 
     function buildPostRent (postRentHTML) {
@@ -93,26 +107,39 @@
     }
 
     function buildRent (rentHTML) {
-        const city = "Bogota, Colombia";
-        const dir = "Calle 123 # 12 -34";
-        const rentValue = "200";
-        const image = images[dc.selectedId % 5];
-        const rol = "owner";
 
-        rentHTML = insertProperty(rentHTML, "city", city);
-        rentHTML = insertProperty(rentHTML, "dir", dir);
-        rentHTML = insertProperty(rentHTML, "rentValue", rentValue);
-        rentHTML = insertProperty(rentHTML, "image", image);
+        var universityHousingInstance;
 
-        insertHTML("#main-content", rentHTML);
+        dc.contracts.UniversityHousing.deployed().then( (instance) => {
+            universityHousingInstance = instance;
+            
+            return universityHousingInstance.rents.call(dc.selectedId);
+        }).then( (rent) => {
+            const owner = rent[1];
+            const renter = rent[2];
+            const city = rent[3];
+            const dir = rent[4];
+            const rentValue = rent[5];
+            const image = images[dc.selectedId % 5];
 
-        if (rol === "owner") {
-            buildAndShowHTML("snippets/rent-owner-buttons-snippet.html", buildRentButtons);
-        } else if (rol === "renter") {
-            buildAndShowHTML("snippets/rent-renter-buttons-snippet.html", buildRentButtons);
-        } else if (rol === "nonOR") {
-            buildAndShowHTML("snippets/rent-nonOR-buttons-snippet.html", buildRentButtons);
-        }
+            rentHTML = insertProperty(rentHTML, "city", city);
+            rentHTML = insertProperty(rentHTML, "dir", dir);
+            rentHTML = insertProperty(rentHTML, "rentValue", rentValue);
+            rentHTML = insertProperty(rentHTML, "image", image);
+
+            insertHTML("#main-content", rentHTML);
+    
+            if (dc.web3Provider.selectedAddress === owner) {
+                buildAndShowHTML("snippets/rent-owner-buttons-snippet.html", buildRentButtons);
+            } else if (dc.web3Provider.selectedAddress === renter) {
+                buildAndShowHTML("snippets/rent-renter-buttons-snippet.html", buildRentButtons);
+            } else {
+                buildAndShowHTML("snippets/rent-nonOR-buttons-snippet.html", buildRentButtons);
+            }
+
+        }).catch( (error) => {
+            console.log(error);
+        });
     }
 
     function buildRentButtons(buttonsHTML) {
@@ -123,7 +150,7 @@
         insertHTML("#main-content", updateRentHTML);
 
         const cityInput = document.querySelector("#city");
-        const directionInput = document.querySelector("#direction");
+        const addressInput = document.querySelector("#address");
         const valueInput = document.querySelector("#value");
 
         
@@ -132,7 +159,7 @@
         const rentValue = "200";
 
         cityInput.value = city;
-        directionInput.value = dir;
+        addressInput.value = dir;
         valueInput.value = rentValue;
     }
 
@@ -154,7 +181,6 @@
     dc.showHome = function () {
         dc.selectedId = undefined;
         buildAndShowHTML("snippets/home-snippet.html", buildHome);
-        buildAndShowHTML("snippets/home-item-snippet.html", buildItem);
     }
 
     dc.showPostRent = function () {
@@ -172,10 +198,6 @@
     }
 
     // Owner Methods
-    dc.postRent = function () {
-        console.log("I am gonna post a rent");
-    }
-
     dc.updateRent = function () {
         console.log("I am gonna update the rent info");
     }
@@ -190,12 +212,41 @@
     }
 
     // NonOR Methods
+    dc.postRent = function () {
+        const city = document.querySelector("#city").value;
+        const rentAddress = document.querySelector("#address").value;
+        const value = document.querySelector("#value").value;
+
+        if (city && rentAddress && value) {
+            if (/^[0-9]*$/.test(value)) {
+                insertHTML("#errors", "");
+
+                const reg = dc;
+                var universityHousingInstance;
+
+                dc.contracts.UniversityHousing.deployed().then( (instance) => {
+                    universityHousingInstance = instance;
+                    
+                    return universityHousingInstance.postRent(city, rentAddress, value, { from: dc.web3Provider.selectedAddress });
+                }).then( () => {
+                    dc.showHome();
+                }).catch( (error) => {
+                    insertHTML("#errors", "Upssss... Ha ocurrido un error enviando la transaccion");
+                });
+                
+            } else {
+                insertHTML("#errors", "El campo de valor debe ser numérico");
+            }
+        } else {
+            insertHTML("#errors", "Debe diligenciar todos los campos");
+        }
+    }
+
     dc.takeRent = function () {
         console.log("I am gonna take the rent");
     }
 
     initWeb3();
-    dc.showHome();
 
     global.$dc = dc;
 
