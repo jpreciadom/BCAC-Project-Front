@@ -21,7 +21,7 @@
         if (global.ethereum) {
             dc.web3Provider = window.ethereum;
             try {
-                await window.eth_requestAccounts;
+                await window.ethereum.enable();
             } catch (error) {
                 console.error("User denied account access");
             }
