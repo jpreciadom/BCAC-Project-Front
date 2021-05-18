@@ -1,0 +1,30 @@
+<div class="row mb-4 px-5">
+    <div class="col px-0 pt-4">
+        <h2 class="title">
+            PAGAR ARRIENDO
+        </h2>
+        <p class="post-rent-description mb-5">
+            ADVERTENCIA: va a pagar el arriendo ubicado en {{ city }}, en la dirección 
+            {{ address }} con un precio de {{ value }} dólares.
+        </p>
+
+        <p class="post-rent-description mb-5">
+            El precio a pagar en ethereum es {{ ethereum }} con una conversón de {{ price }}
+            dólares / ehtereum.
+        </p>
+    </div>
+</div>
+
+<div class="row px-4 mb-4">
+    <div class="col-12 col-md-6 px-4 ps-md-4 pe-md-1 mb-3">
+        <button type="button" class="btn btn-danger post-rent-button"
+            onclick="$dc.showRent($dc.selectedId);">Cancelar</button>
+    </div>
+    <div class="col-12 col-md-6 px-4 ps-md-1 pe-md-4">
+        <button type="button" class="btn btn-success post-rent-button" onclick="$dc.payRent('{{ eth }}');">Pagar</button>
+    </div>
+</div>
+
+<div id="errors" class="row mx-2 px-4 mb-4">
+
+</div>

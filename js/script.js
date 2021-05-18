@@ -21,7 +21,7 @@
         if (global.ethereum) {
             dc.web3Provider = window.ethereum;
             try {
-                await window.ethereum.enable();
+                await window.eth_requestAccounts;
             } catch (error) {
                 console.error("User denied account access");
             }
@@ -35,19 +35,6 @@
     }
 
     async function initContract () {
-        // var Contract = require('./node_modules/web3-eth-contract');
-        // const web3 = new Web3("https://kovan.infura.io/v3/<infura_project_id>");
-        // const aggregatorV3InterfaceABI = [{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"description","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint80","name":"_roundId","type":"uint80"}],"name":"getRoundData","outputs":[{"internalType":"uint80","name":"roundId","type":"uint80"},{"internalType":"int256","name":"answer","type":"int256"},{"internalType":"uint256","name":"startedAt","type":"uint256"},{"internalType":"uint256","name":"updatedAt","type":"uint256"},{"internalType":"uint80","name":"answeredInRound","type":"uint80"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"latestRoundData","outputs":[{"internalType":"uint80","name":"roundId","type":"uint80"},{"internalType":"int256","name":"answer","type":"int256"},{"internalType":"uint256","name":"startedAt","type":"uint256"},{"internalType":"uint256","name":"updatedAt","type":"uint256"},{"internalType":"uint80","name":"answeredInRound","type":"uint80"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"version","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
-        // const addr = "0x9326BFA02ADD2366b30bacB125260Af641031331";
-        // console.log(web3.eth);
-        // const priceFeed = new web3.eth.Contract(aggregatorV3InterfaceABI, addr);
-        // priceFeed.methods.latestRoundData().call()
-        //     .then((roundData) => {
-        //         // Do something with roundData
-        //         console.log("Latest Round Data", roundData)
-        //     });
-
-
         $ajaxUtils.sendGetRequest(
             "artifacts/UniversityHousing.json",
             function (json) {
@@ -100,13 +87,13 @@
                 var current = itemHTML;
 
                 const city = rent[3];
-                const dir = rent[4];
-                const rentValue = rent[5];
+                const address = rent[4];
+                const rentValue = rent[5] / 100000000;
                 const image = images[i % 5];
 
                 current = insertProperty(current, "id", i);
                 current = insertProperty(current, "city", city);
-                current = insertProperty(current, "dir", dir);
+                current = insertProperty(current, "address", address);
                 current = insertProperty(current, "rentValue", rentValue);
                 current = insertProperty(current, "image", image);
 
@@ -135,12 +122,12 @@
             const owner = rent[1];
             const renter = rent[2];
             const city = rent[3];
-            const dir = rent[4];
-            const rentValue = rent[5];
+            const address = rent[4];
+            const rentValue = rent[5] / 100000000;
             const image = images[dc.selectedId % 5];
 
             rentHTML = insertProperty(rentHTML, "city", city);
-            rentHTML = insertProperty(rentHTML, "dir", dir);
+            rentHTML = insertProperty(rentHTML, "address", address);
             rentHTML = insertProperty(rentHTML, "rentValue", rentValue);
             rentHTML = insertProperty(rentHTML, "image", image);
 
@@ -183,11 +170,45 @@
 
             cityInput.value = city;
             addressInput.value = dir;
-            valueInput.value = rentValue;
+            valueInput.value = rentValue / 100000000;
         }).catch( (error) => {
             insertHTML("#errors", "Upss... Ha ocurrido un error intentando cargar los datos del arriendo.");
             console.log(error);
         });
+    }
+
+    function buildPayRent(payRentHTML) {
+        
+        var universityHousingInstance;
+        var value;
+
+        dc.contracts.UniversityHousing.deployed().then( (instance) => {
+            universityHousingInstance = instance;
+
+            return universityHousingInstance.rents.call(dc.selectedId);
+        }).then( (rent) => {
+            const city = rent[3];
+            const address = rent[4];
+            value = rent[5] / 100000000;
+
+            payRentHTML = insertProperty(payRentHTML, "city", city);
+            payRentHTML = insertProperty(payRentHTML, "address", address);
+            payRentHTML = insertProperty(payRentHTML, "value", value);
+
+            return universityHousingInstance.getThePrice.call();
+        }).then( (response) => {
+            const price = response.c[0] / 100000000;
+            const ethereum = parseFloat((value / price).toFixed(6)) + 0.000001;
+            const eth = ethereum * 1000000000000000000;
+
+            payRentHTML = insertProperty(payRentHTML, "ethereum", ethereum);
+            payRentHTML = insertProperty(payRentHTML, "price", price);
+            payRentHTML = insertProperty(payRentHTML, "eth", eth);
+
+            insertHTML("#main-content", payRentHTML);
+        }).catch( (error) => {
+            console.log(error);
+        })
     }
 
     function buildAndShowHTML (htmlURL, buildFunction) {
@@ -224,6 +245,10 @@
         buildAndShowHTML("snippets/update-rent-snippet.html", buildUpdateRent);
     }
 
+    dc.showPayRent = function () {
+        buildAndShowHTML("snippets/pay-rent-snippet.html", buildPayRent);
+    }
+
     // Owner Methods
     dc.updateRent = function () {
         const city = document.querySelector("#city").value;
@@ -243,7 +268,7 @@
                         dc.selectedId,
                         city,
                         rentAddress,
-                        value,
+                        value * 100000000,
                         { from: dc.web3Provider.selectedAddress }
                     );
                 }).then( () => {
@@ -275,8 +300,14 @@
         });
     }
 
-    dc.payRent = function () {
-        console.log("I am paying my rent");
+    dc.payRent = function (rentValue) {
+        dc.contracts.UniversityHousing.deployed().then( (instance) => {
+            return instance.payRent(dc.selectedId, { from: dc.web3Provider.selectedAddress, value: rentValue });
+        }).then( () => {
+            dc.showRent(dc.selectedId);
+        }).catch( (error) => {
+            console.log(error);
+        });
     }
 
     // NonOR Methods
@@ -294,7 +325,11 @@
                 dc.contracts.UniversityHousing.deployed().then( (instance) => {
                     universityHousingInstance = instance;
                     
-                    return universityHousingInstance.postRent(city, rentAddress, value, { from: dc.web3Provider.selectedAddress });
+                    return universityHousingInstance.postRent(
+                        city,
+                        rentAddress,
+                        value * 100000000,
+                        { from: dc.web3Provider.selectedAddress });
                 }).then( () => {
                     dc.showHome();
                 }).catch( (error) => {

@@ -27,6 +27,10 @@ body {
     background-color: #fff;
 }
 
+.title {
+    font-size: 36px;
+}
+
 /* Home styles */
 
 .item {
@@ -47,11 +51,7 @@ body {
     margin-bottom: 0;
 }
 
-/* Post a rent syles */
-
-.post-rent-title {
-    font-size: 36px;
-}
+/* Post-update a rent syles */
 
 .post-rent-item {
     font-size: 29px;
